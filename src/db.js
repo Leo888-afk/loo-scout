@@ -1,8 +1,6 @@
-const { DatabaseSync } = require('node:sqlite');
+const { createClient } = require('@libsql/client');
 const fs = require('fs');
 const path = require('path');
-
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'looscout.db');
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
@@ -56,7 +54,11 @@ CREATE INDEX IF NOT EXISTS idx_reports_resolved ON reports(resolved);
 CREATE INDEX IF NOT EXISTS idx_washrooms_status ON washrooms(status);
 `;
 
-// Haversine distance in km. Computed in JS (node:sqlite has no UDF support);
+const SCHEMA_STATEMENTS = SCHEMA.split(';')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+// Haversine distance in km, computed in JS (no UDF support over the wire);
 // the washroom table is small, so in-app sorting is cheap and exact.
 function haversineKm(lat1, lon1, lat2, lon2) {
   if ([lat1, lon1, lat2, lon2].some((v) => v === null || v === undefined || Number.isNaN(v))) return null;
@@ -69,13 +71,64 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-function initDb() {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  const db = new DatabaseSync(DB_PATH);
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec(SCHEMA);
+// Thin async wrapper around a libSQL client with a small, sqlite-flavoured
+// surface (get/all/run/exec/transaction) so call sites stay readable.
+class Db {
+  constructor(client) {
+    this.client = client;
+  }
+
+  async get(sql, ...args) {
+    const rs = await this.client.execute({ sql, args });
+    return rs.rows[0];
+  }
+
+  async all(sql, ...args) {
+    const rs = await this.client.execute({ sql, args });
+    return rs.rows;
+  }
+
+  async run(sql, ...args) {
+    const rs = await this.client.execute({ sql, args });
+    const id = rs.lastInsertRowid;
+    return {
+      lastInsertRowid: id === undefined || id === null ? id : Number(id),
+      changes: rs.rowsAffected,
+    };
+  }
+
+  async exec(sql) {
+    await this.client.execute({ sql, args: [] });
+  }
+
+  async transaction(fn) {
+    const tx = await this.client.transaction('write');
+    try {
+      const result = await fn(new Db(tx));
+      await tx.commit();
+      return result;
+    } catch (e) {
+      await tx.rollback();
+      throw e;
+    }
+  }
+}
+
+async function initDb() {
+  const tursoUrl = process.env.TURSO_DATABASE_URL;
+  let client;
+  if (tursoUrl) {
+    client = createClient({ url: tursoUrl, authToken: process.env.TURSO_AUTH_TOKEN });
+  } else {
+    // Local file database (dev + tests). DB_PATH is honoured so the
+    // existing smoke test keeps working unchanged.
+    const filePath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'looscout.db');
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    client = createClient({ url: 'file:' + filePath });
+  }
+  const db = new Db(client);
+  await db.client.batch(SCHEMA_STATEMENTS.map((sql) => ({ sql, args: [] })));
   return db;
 }
 
-module.exports = { initDb, DB_PATH, haversineKm };
+module.exports = { initDb, Db, haversineKm };

@@ -1,77 +1,88 @@
 const session = require('express-session');
 
-// Minimal SQLite-backed session store (avoids the MemoryStore leak and
-// survives restarts, with no extra dependencies).
-class SQLiteStore extends session.Store {
+// libSQL-backed session store (avoids the MemoryStore leak and survives
+// restarts, with no extra dependencies). Works against Turso or a local file.
+class LibsqlStore extends session.Store {
   constructor(db) {
     super();
     this.db = db;
-    this.db
-      .prepare(
-        `CREATE TABLE IF NOT EXISTS sessions (
-           sid TEXT PRIMARY KEY,
-           sess TEXT NOT NULL,
-           expires INTEGER NOT NULL
-         )`
-      )
-      .run();
-    this.getStmt = this.db.prepare('SELECT sess, expires FROM sessions WHERE sid = ?');
-    this.setStmt = this.db.prepare(
-      `INSERT INTO sessions (sid, sess, expires) VALUES (?, ?, ?)
-       ON CONFLICT(sid) DO UPDATE SET sess = excluded.sess, expires = excluded.expires`
-    );
-    this.destroyStmt = this.db.prepare('DELETE FROM sessions WHERE sid = ?');
     // Opportunistic cleanup of expired sessions (at most once per minute).
     this.lastSweep = 0;
   }
 
+  static async create(db) {
+    const store = new LibsqlStore(db);
+    await db.exec(
+      `CREATE TABLE IF NOT EXISTS sessions (
+         sid TEXT PRIMARY KEY,
+         sess TEXT NOT NULL,
+         expires INTEGER NOT NULL
+       )`
+    );
+    return store;
+  }
+
   get(sid, cb) {
-    try {
-      const row = this.getStmt.get(sid);
-      if (!row) return cb(null, null);
-      if (row.expires <= Date.now()) {
-        this.destroyStmt.run(sid);
-        return cb(null, null);
-      }
-      cb(null, JSON.parse(row.sess));
-    } catch (err) {
-      cb(err);
-    }
+    this.db.get('SELECT sess, expires FROM sessions WHERE sid = ?', sid).then(
+      (row) => {
+        if (!row) return cb(null, null);
+        if (row.expires <= Date.now()) {
+          this.db.run('DELETE FROM sessions WHERE sid = ?', sid).then(
+            () => cb(null, null),
+            cb
+          );
+          return;
+        }
+        try {
+          cb(null, JSON.parse(row.sess));
+        } catch (err) {
+          cb(err);
+        }
+      },
+      cb
+    );
   }
 
   set(sid, sess, cb) {
-    try {
-      const expires =
-        sess.cookie && sess.cookie.expires
-          ? new Date(sess.cookie.expires).getTime()
-          : Date.now() + 7 * 24 * 3600 * 1000;
-      this.setStmt.run(sid, JSON.stringify(sess), expires);
-      if (Date.now() - this.lastSweep > 60000) {
-        this.lastSweep = Date.now();
-        this.db.prepare('DELETE FROM sessions WHERE expires <= ?').run(Date.now());
-      }
-      cb(null);
-    } catch (err) {
-      cb(err);
-    }
+    const expires =
+      sess.cookie && sess.cookie.expires
+        ? new Date(sess.cookie.expires).getTime()
+        : Date.now() + 7 * 24 * 3600 * 1000;
+    this.db
+      .run(
+        `INSERT INTO sessions (sid, sess, expires) VALUES (?, ?, ?)
+         ON CONFLICT(sid) DO UPDATE SET sess = excluded.sess, expires = excluded.expires`,
+        sid,
+        JSON.stringify(sess),
+        expires
+      )
+      .then(
+        () => {
+          if (Date.now() - this.lastSweep > 60000) {
+            this.lastSweep = Date.now();
+            this.db.run('DELETE FROM sessions WHERE expires <= ?', Date.now()).then(
+              () => cb(null),
+              cb
+            );
+          } else {
+            cb(null);
+          }
+        },
+        cb
+      );
   }
 
   destroy(sid, cb) {
-    try {
-      this.destroyStmt.run(sid);
-      cb(null);
-    } catch (err) {
-      cb(err);
-    }
+    this.db.run('DELETE FROM sessions WHERE sid = ?', sid).then(() => cb(null), cb);
   }
 }
 
-function sessionMiddleware(db) {
+async function sessionMiddleware(db) {
   if (!process.env.SESSION_SECRET) {
     throw new Error('SESSION_SECRET env var is required');
   }
   return session({
-    store: new SQLiteStore(db),
+    store: await LibsqlStore.create(db),
     name: 'looscout.sid',
     secret: process.env.SESSION_SECRET,
     resave: false,
