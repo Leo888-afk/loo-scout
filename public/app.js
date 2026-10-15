@@ -105,9 +105,9 @@
       '<p class="muted small" style="margin-top:8px">Tap a pin for details. ' +
       'Green = clean (4+), yellow = okay (3+), red = rough, gray = unrated.</p>';
     var map = L.map('map').setView(DEFAULT_CENTER, 13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, Maxar, Earthstar Geographics',
     }).addTo(map);
     state.map = map;
     loadMarkers(map, null);
@@ -361,9 +361,9 @@
       '<button class="btn block" id="aSave">Add washroom</button></div>';
 
     var map = L.map('addmap').setView(DEFAULT_CENTER, 13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, Maxar, Earthstar Geographics',
     }).addTo(map);
     state.addMap = map;
     state.addLatLng = null;
