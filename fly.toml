@@ -1,0 +1,30 @@
+# Fly.io config for Loo Scout. After `fly launch`, create the data volume:
+#   fly volumes create loo_scout_data --size 1
+# and set secrets:
+#   fly secrets set SESSION_SECRET=<long-random-string> ADMIN_EMAIL=you@example.com
+
+app = "loo-scout"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[[mounts]]
+  source = "loo_scout_data"
+  destination = "/data"
+
+[env]
+  NODE_ENV = "production"
