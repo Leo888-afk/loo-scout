@@ -105,9 +105,9 @@
       '<p class="muted small" style="margin-top:8px">Tap a pin for details. ' +
       'Green = clean (4+), yellow = okay (3+), red = rough, gray = unrated.</p>';
     var map = L.map('map').setView(DEFAULT_CENTER, 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     }).addTo(map);
     state.map = map;
     loadMarkers(map, null);
@@ -361,9 +361,9 @@
       '<button class="btn block" id="aSave">Add washroom</button></div>';
 
     var map = L.map('addmap').setView(DEFAULT_CENTER, 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     }).addTo(map);
     state.addMap = map;
     state.addLatLng = null;

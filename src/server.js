@@ -21,7 +21,7 @@ async function main() {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", 'https://unpkg.com'],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
-        imgSrc: ["'self'", 'data:', 'https://*.tile.openstreetmap.org', 'https://unpkg.com'],
+        imgSrc: ["'self'", 'data:', 'https://*.tile.openstreetmap.org', 'https://*.basemaps.cartocdn.com', 'https://unpkg.com'],
         connectSrc: ["'self'"],
         fontSrc: ["'self'", 'https://unpkg.com'],
       },
