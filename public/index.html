@@ -3,9 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0d6efd">
+  <meta name="theme-color" content="#0a97a8">
   <meta name="description" content="Loo Scout — find public washrooms nearby and share honest ratings.">
   <title>Loo Scout — find a public washroom</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Loo Scout">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="">
@@ -13,7 +18,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#/">🚻 Loo Scout</a>
+    <a class="brand" href="#/"><img class="brandmark" src="/icons/icon-192.png" alt="" width="30" height="30">Loo Scout</a>
     <nav class="topnav" id="topnav"></nav>
   </header>
 

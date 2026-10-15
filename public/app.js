@@ -97,13 +97,24 @@
     });
   }
 
+  function ratingPill(w) {
+    if (!w.ratingCount || w.avgCleanliness === null || w.avgCleanliness === undefined) {
+      return '<span class="pill gray">unrated</span>';
+    }
+    var cls = w.avgCleanliness >= 4 ? 'green' : (w.avgCleanliness >= 3 ? 'yellow' : 'red');
+    return '<span class="pill ' + cls + '">' + Number(w.avgCleanliness).toFixed(1) + ' ★ clean</span>';
+  }
+
   // ---------------- Map view ----------------
   function viewMap() {
+    view.classList.add('mapview');
     view.innerHTML =
       '<div class="mapwrap"><div id="map"></div>' +
-      '<button class="mapbtn" id="findme">📍 Near me</button></div>' +
-      '<p class="muted small" style="margin-top:8px">Tap a pin for details. ' +
-      'Green = clean (4+), yellow = okay (3+), red = rough, gray = unrated.</p>';
+      '<button class="mapbtn" id="findme">📍 Near me</button>' +
+      '<div class="maplegend"><span class="dots">' +
+      '<span class="dot green"></span><span class="dot yellow"></span>' +
+      '<span class="dot red"></span><span class="dot gray"></span></span>' +
+      '<span>Tap a pin for details. Green = clean (4+), yellow = okay (3+), red = rough, gray = unrated.</span></div></div>';
     var map = L.map('map').setView(DEFAULT_CENTER, 13);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
@@ -169,10 +180,10 @@
   function viewList() {
     view.innerHTML =
       '<div class="toolbar">' +
-      '<input type="text" id="q" placeholder="Search by name…" value="' + esc(listFilters.q) + '">' +
+      '<div class="searchwrap"><input type="text" id="q" placeholder="Search by name…" value="' + esc(listFilters.q) + '"></div>' +
       '<button class="chip' + (listFilters.wheelchair ? ' on' : '') + '" id="fWc">♿ Accessible</button>' +
       '<button class="chip' + (listFilters.baby ? ' on' : '') + '" id="fBaby">👶 Change table</button>' +
-      '<select id="sort" style="width:auto;margin:0">' +
+      '<select id="sort">' +
       '<option value="distance"' + (listFilters.sort === 'distance' ? ' selected' : '') + '>Nearest first</option>' +
       '<option value="rating"' + (listFilters.sort === 'rating' ? ' selected' : '') + '>Top rated</option>' +
       '</select></div>' +
@@ -211,9 +222,9 @@
       box.innerHTML = list.map(function (w) {
         return '<a class="card wc-item" href="#/w/' + w.id + '">' +
           '<h3>' + esc(w.name) + '</h3>' +
-          '<div class="wc-meta">' + stars(w.avgCleanliness) +
+          '<div class="wc-meta">' + ratingPill(w) +
           '<span>' + w.ratingCount + ' rating' + (w.ratingCount === 1 ? '' : 's') + '</span>' +
-          (w.distanceKm !== undefined && w.distanceKm !== null ? '<span>📍 ' + esc(fmtDist(w.distanceKm)) + '</span>' : '') +
+          (w.distanceKm !== undefined && w.distanceKm !== null ? '<span class="wc-dist">📍 ' + esc(fmtDist(w.distanceKm)) + '</span>' : '') +
           (w.wheelchairAccessible ? '<span>♿</span>' : '') +
           (w.babyChangeTable ? '<span>👶</span>' : '') +
           '</div></a>';
@@ -231,8 +242,8 @@
     }).then(function (w) {
       var html =
         '<div class="card"><h2>' + esc(w.name) + '</h2>' +
-        '<div class="wc-meta">' +
-        (w.distanceKm !== null ? '<span>📍 ' + esc(fmtDist(w.distanceKm)) + ' away</span>' : '') +
+        '<div class="hero-badges">' +
+        (w.distanceKm !== null ? '<span class="badge">📍 ' + esc(fmtDist(w.distanceKm)) + ' away</span>' : '') +
         (w.wheelchairAccessible ? '<span class="badge">♿ Wheelchair accessible</span>' : '') +
         (w.babyChangeTable ? '<span class="badge">👶 Baby change table</span>' : '') +
         '</div>' +
@@ -243,7 +254,9 @@
         '<div class="stat"><div class="v">' + (w.avgStalls === null ? '–' : w.avgStalls) + '</div><div class="l">Stalls (avg)</div></div>' +
         '<div class="stat"><div class="v">' + (w.avgUrinals === null ? '–' : w.avgUrinals) + '</div><div class="l">Urinals (avg)</div></div>' +
         '</div>' +
+        '<div class="hero-actions">' +
         '<a class="btn block" target="_blank" rel="noopener" href="' + esc(directionsUrl(w)) + '">🧭 Get directions</a>' +
+        '</div>' +
         '<details class="reportbox"><summary>Report this washroom</summary>' +
         '<input type="text" id="repReason" placeholder="What\u2019s wrong?">' +
         '<button class="btn secondary smallbtn" id="repBtn">Send report</button></details>' +
@@ -280,7 +293,7 @@
       return '<label>' + label + '<select id="' + id + '">' + opts + '</select></label>';
     }
     return (
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+      '<div class="rateform-grid">' +
       sel('fClean', '🧼 Cleanliness (1-5)', 1, 5, existing ? existing.cleanliness : 4) +
       sel('fPriv', '🔒 Privacy (1-5)', 1, 5, existing ? existing.privacy : 3) +
       sel('fStalls', '🚻 Stalls', 0, 20, existing ? existing.stalls : 2) +
@@ -403,11 +416,11 @@
   // ---------------- Auth views ----------------
   function viewLogin() {
     view.innerHTML =
-      '<div class="card"><h2>Log in</h2>' +
+      '<div class="authwrap"><div class="card"><h2>Welcome back</h2>' +
       '<label>Email<input type="email" id="lEmail" autocomplete="email"></label>' +
       '<label>Password<input type="password" id="lPass" autocomplete="current-password"></label>' +
       '<button class="btn block" id="lGo">Log in</button>' +
-      '<p class="small">No account? <a href="#/register">Sign up</a></p></div>';
+      '<p class="small auth-alt">No account? <a href="#/register">Sign up</a></p></div></div>';
     document.getElementById('lGo').onclick = function () {
       api('POST', '/auth/login', {
         email: document.getElementById('lEmail').value,
@@ -419,12 +432,12 @@
 
   function viewRegister() {
     view.innerHTML =
-      '<div class="card"><h2>Sign up</h2>' +
+      '<div class="authwrap"><div class="card"><h2>Create your account</h2>' +
       '<label>Display name<input type="text" id="rName" maxlength="40" autocomplete="nickname"></label>' +
       '<label>Email<input type="email" id="rEmail" autocomplete="email"></label>' +
-      '<label>Password (min 8 chars)<input type="password" id="rPass" autocomplete="new-password"></label>' +
+      '<label>Password <span class="hint">(min 8 characters)</span><input type="password" id="rPass" autocomplete="new-password"></label>' +
       '<button class="btn block" id="rGo">Create account</button>' +
-      '<p class="small">Have an account? <a href="#/login">Log in</a></p></div>';
+      '<p class="small auth-alt">Have an account? <a href="#/login">Log in</a></p></div></div>';
     document.getElementById('rGo').onclick = function () {
       api('POST', '/auth/register', {
         displayName: document.getElementById('rName').value,
@@ -462,7 +475,7 @@
       if (!list.length) { box.innerHTML = '<p class="muted">None flagged. 🎉</p>'; return; }
       box.innerHTML = list.map(function (w) {
         return '<div class="rating-row"><strong>' + esc(w.name) + '</strong>' +
-          '<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">' +
+          '<div class="rep-actions" style="margin-top:6px">' +
           '<button class="btn smallbtn" data-approve="' + w.id + '">Approve</button>' +
           '<button class="btn danger smallbtn" data-delw="' + w.id + '">Delete</button></div></div>';
       }).join('');
@@ -475,17 +488,19 @@
       var box = document.getElementById('admReports');
       if (!box) return;
       if (!rows.length) { box.innerHTML = '<p class="muted">No open reports. 🎉</p>'; return; }
-      box.innerHTML = '<table class="admin"><tr><th>Target</th><th>Reason</th><th>Reporter</th><th></th></tr>' +
-        rows.map(function (r) {
-          return '<tr><td><strong>' + esc(r.target_type) + '</strong><br>' + esc(r.target_summary || ('#' + r.target_id)) +
-            '<br><span class="muted">' + esc(r.created_at.slice(0, 16).replace('T', ' ')) + '</span></td>' +
-            '<td>' + esc(r.reason) + '</td><td>' + esc(r.reporter_name) + '</td>' +
-            '<td><button class="btn secondary smallbtn" data-resolve="' + r.id + '">Resolve</button><br><br>' +
-            (r.target_type === 'washroom'
-              ? '<button class="btn smallbtn" data-hidew="' + r.target_id + '">Hide washroom</button>'
-              : '<button class="btn danger smallbtn" data-delr="' + r.target_id + '">Delete rating</button>') +
-            '</td></tr>';
-        }).join('') + '</table>';
+      box.innerHTML = rows.map(function (r) {
+        return '<div class="rep-card"><div class="rep-target">' + esc(r.target_type) + ': ' +
+          esc(r.target_summary || ('#' + r.target_id)) + '</div>' +
+          '<div class="rep-reason">“' + esc(r.reason) + '”</div>' +
+          '<div class="rep-meta">Reported by ' + esc(r.reporter_name) + ' · ' +
+          esc(r.created_at.slice(0, 16).replace('T', ' ')) + '</div>' +
+          '<div class="rep-actions">' +
+          '<button class="btn secondary smallbtn" data-resolve="' + r.id + '">Resolve</button>' +
+          (r.target_type === 'washroom'
+            ? '<button class="btn smallbtn" data-hidew="' + r.target_id + '">Hide washroom</button>'
+            : '<button class="btn danger smallbtn" data-delr="' + r.target_id + '">Delete rating</button>') +
+          '</div></div>';
+      }).join('');
       wireAdmin(box);
     }).catch(function (e) {
       var box = document.getElementById('admReports');
@@ -538,6 +553,7 @@
 
   function route() {
     cleanupMaps();
+    view.classList.remove('mapview');
     setNav();
     var h = location.hash || '#/';
     var m;
@@ -553,6 +569,13 @@
   }
 
   window.addEventListener('hashchange', route);
+
+  // Installable PWA: cache the app shell for offline-capable launches.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function () { /* offline support is best-effort */ });
+    });
+  }
 
   api('GET', '/auth/me')
     .then(function (r) { state.user = r.user; })
